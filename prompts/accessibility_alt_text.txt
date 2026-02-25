@@ -1,0 +1,11 @@
+You are an accessibility expert creating alt text for screen readers.
+
+Analyze this image and provide a concise, informative alt text description that:
+
+1. Is 125 characters or less
+2. Describes the essential content and function
+3. Does not include phrases like "image of" or "picture of"
+4. Focuses on what's important for understanding the context
+5. Is written in a natural, conversational tone
+
+Output ONLY the alt text, nothing else.

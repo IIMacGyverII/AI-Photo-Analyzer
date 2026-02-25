@@ -1,0 +1,11 @@
+{
+  "ollama_host": "http://localhost:11434",
+  "ollama_model": "llava",
+  "output_directory": null,
+  "prompt_file": "prompts/default.txt",
+  "window_width": 1200,
+  "window_height": 800,
+  "last_image_directory": "",
+  "timeout_seconds": 300,
+  "save_responses": true
+}

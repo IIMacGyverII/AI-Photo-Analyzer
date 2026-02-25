@@ -1,0 +1,28 @@
+Analyze this product image for an e-commerce listing:
+
+## Product Analysis
+
+### Product Identification
+- Product name/type
+- Brand (if visible)
+- Model/SKU (if visible)
+
+### Physical Description
+- Main features visible in the image
+- Size/dimensions (estimated)
+- Color(s) and finish
+- Condition assessment
+
+### Quality Indicators
+- Manufacturing quality observations
+- Packaging condition (if visible)
+- Notable defects or wear
+
+### Marketing Copy
+Write a compelling 2-3 sentence product description suitable for an online store.
+
+### Suggested Categories
+List 3-5 appropriate product categories for this item.
+
+### Price Range Estimate
+Based on visible features and condition, suggest a reasonable price range.

@@ -1,0 +1,31 @@
+Extract and analyze all visible text in this image:
+
+## Text Extraction
+
+### Main Text Content
+[List all readable text, preserving formatting and hierarchy]
+
+### Text Location & Context
+For each text element:
+- **Text**: [The actual text]
+- **Location**: [Where it appears in the image]
+- **Style**: [Font characteristics, size, color]
+- **Purpose**: [Heading, body, caption, label, etc.]
+
+### Language & Translation
+- **Primary Language**: [Identified language]
+- **Additional Languages**: [If multilingual]
+- **Translation**: [If not in English, provide translation]
+
+### Text Quality
+- **Readability**: [Easy/Medium/Difficult to read]
+- **Legibility Issues**: [Blur, distortion, occlusion, etc.]
+- **Confidence Level**: [High/Medium/Low for OCR accuracy]
+
+### Contextual Analysis
+- What is the purpose of this text?
+- Who is the intended audience?
+- What action or information does it convey?
+
+### Structured Data
+If the image contains forms, tables, or structured information, extract it in markdown table format.

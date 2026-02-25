@@ -1,0 +1,37 @@
+Analyze this photograph from a technical perspective:
+
+## Technical Photography Analysis
+
+### Camera Settings (Estimated)
+- **Focal Length**: [Estimate based on perspective]
+- **Aperture**: [Estimate based on depth of field]
+- **ISO**: [Estimate based on noise/grain]
+- **Shutter Speed**: [Estimate based on motion blur/sharpness]
+
+### Lighting Analysis
+- **Light Source**: [Natural/artificial, direction, quality]
+- **Lighting Setup**: [Number of lights, modifiers used if identifiable]
+- **White Balance**: [Color temperature assessment]
+- **Exposure**: [Properly exposed, overexposed, underexposed]
+
+### Composition Techniques
+- **Rule of Thirds**: [Applied? How?]
+- **Leading Lines**: [Present? Effective?]
+- **Framing**: [Analysis of compositional choices]
+- **Balance**: [Visual weight distribution]
+- **Symmetry/Asymmetry**: [Observations]
+
+### Post-Processing
+- **Color Grading**: [Observations on color treatment]
+- **Contrast**: [Analysis of tonal range]
+- **Sharpness**: [In-camera or post-processed?]
+- **Visible Edits**: [HDR, filters, retouching, etc.]
+
+### Technical Quality
+- **Sharpness/Focus**: [Assessment]
+- **Noise/Grain**: [Observations]
+- **Chromatic Aberration**: [Present?]
+- **Distortion**: [Barrel, pincushion, etc.]
+
+### Improvement Suggestions
+Provide 3-5 specific suggestions for how this photograph could be improved technically or compositionally.
