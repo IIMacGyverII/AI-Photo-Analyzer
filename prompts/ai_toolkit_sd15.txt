@@ -4,7 +4,7 @@ Describe the image in rich, natural-language detail suitable as a direct .txt ca
 
 SD1.5-Specific Rules:
 - SD1.5 works best with clear, structured descriptions
-- Keep descriptions more concise and focused than SDXL/FLUX (150–250 words optimal)
+- Keep descriptions more concise and focused than SDXL/FLUX (target 150–250 words)
 - Emphasize the main subject and primary visual elements
 - Use common, widely-understood descriptive terms rather than overly poetic language
 - Include concrete details about colors, poses, clothing, and environment
@@ -13,11 +13,12 @@ SD1.5-Specific Rules:
 
 General Rules:
 - Output ONLY plain descriptive text — no headers, no markdown, no bullet lists, no summaries, no JSON
+- NO word counts or meta-commentary like "this image shows" or "the caption is"
 - Be detailed but focused: prioritize subject(s), pose/expression, clothing, environment, lighting, and composition
 - For character/subject training: describe pose, expression, scene, clothing details, but AVOID describing permanent identity traits you want the trigger word to control (hair color/style, face shape)
 - For style/art training: include style/medium keywords if training a style LoRA (e.g., "anime art style", "realistic photography")
-- Use natural sentences with some tag-like elements. Aim for 150–250 words
+- Use natural sentences with some tag-like elements
 - If a trigger placeholder is needed, include the literal word [trigger] where the main subject/identity/style should be referenced
 - Avoid over-complicating with minor details SD1.5 can't capture well
 
-Now, describe this image in detail:
+Describe this image in detail. Begin immediately:

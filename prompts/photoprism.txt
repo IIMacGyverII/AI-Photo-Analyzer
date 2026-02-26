@@ -7,11 +7,12 @@ PhotoPrism-Specific Rules:
 - Use concrete, searchable keywords (nouns, proper nouns, activities, locations)
 - Include: main subjects, people (count/description), animals, objects, activities, location types, setting, time of day
 - Mention colors, composition style (portrait/landscape/close-up), and technical aspects if notable
-- Keep it concise but comprehensive - aim for 50-150 words
+- Keep it concise but comprehensive (target 50-150 words)
 - Use natural sentences but prioritize searchable terms
 - Include category-relevant keywords: indoor/outdoor, event type, season, weather, mood
 - Avoid artistic interpretation - stick to observable facts
 - Think about what someone might search for to find this photo
+- Output ONLY the description text — NO word counts, NO meta-commentary, NO labels
 
 Searchable Elements to Include:
 - WHO: number and type of people/subjects (e.g., "two children," "woman," "golden retriever")

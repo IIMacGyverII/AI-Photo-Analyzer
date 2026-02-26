@@ -11,12 +11,6 @@
 
 ## ✨ Features
 
-### 🎨 Beautiful Modern Interface
-- **Dark-themed UI** with a polished, professional aesthetic inspired by modern design principles
-- **Drag-and-drop** support for effortless image loading
-- **Live preview** of images with automatic scaling and aspect ratio preservation
-- **Responsive layout** with resizable splitter for optimal workspace organization
-
 ### 🧠 Powerful AI Analysis
 - **Any Ollama vision model**: llava, moondream, bakllava, or any custom model
 - **Remote server support**: Connect to Ollama running anywhere on your network

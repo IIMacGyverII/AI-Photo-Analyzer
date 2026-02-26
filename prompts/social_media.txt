@@ -7,13 +7,14 @@ Social Media Rules:
 - Use conversational, relatable language that matches the platform's tone
 - Include natural hashtag opportunities (don't list them, but mention searchable concepts)
 - Create emotional connection - inspire, entertain, or inform
-- Keep it concise but impactful (80-150 words optimal)
+- Keep it concise but impactful (target 80-150 words)
 - Use storytelling when possible - what's the story behind this image?
 - Mention relevant trends, seasons, or cultural moments
 - Include call-to-action elements naturally (save, share, tag vibes)
 - Write in second person ("you") or first person ("I/we") for connection
 - Focus on relatable experiences and feelings
 - Describe in a way that makes people want to comment
+- Output ONLY the caption text — NO word counts, NO meta-commentary
 
 Engagement Elements:
 - Relatable moments or feelings

@@ -16,10 +16,11 @@ SD3-Specific Rules (MMDiT architecture with triple text encoders):
 
 General Rules:
 - Output ONLY plain descriptive text — no headers, no markdown, no bullet lists, no summaries, no JSON
+- NO word counts or meta-commentary like "this image shows" or "the description is"
 - Be extremely detailed: include subject(s), actions/poses/expressions, clothing/accessories, environment/background, lighting, colors, mood/atmosphere, composition, visible text/objects/details
 - For character/subject training: describe pose, expression, scene, clothing details, but AVOID describing permanent identity traits you want the trigger word to control (hair color/style, face shape, exact outfit if consistent)
 - For style/art training: describe the scene/subject/content with rich detail, include artistic medium/style if training a style LoRA
-- Use natural, flowing sentences in well-structured paragraphs. Aim for 200-400 words of precise description
+- Use natural, flowing sentences in well-structured paragraphs (target 200-400 words of precise description)
 - If a trigger placeholder is needed, include the literal word [trigger] where the main subject/identity/style should be referenced
 - Never add generic filler like "high quality" or "detailed" — describe actual visible qualities
 - For images with text: Quote the exact text and describe its typography, placement, and style
@@ -27,4 +28,4 @@ General Rules:
 Example structure with text:
 "[trigger] stands confidently in an urban alleyway, wearing a burgundy leather jacket with silver zippers over a cream turtleneck sweater. Behind them, a vibrant neon sign reads 'OPEN 24/7' in electric blue and hot pink letters, casting a cyan glow across the wet pavement. The character's expression is contemplative, eyes gazing off-camera to the right. The scene is shot from a slightly low angle, emphasizing the graffiti-covered brick walls that frame both sides of the narrow passage..."
 
-Now, describe this image in detail:
+Describe this image in detail. Begin immediately:

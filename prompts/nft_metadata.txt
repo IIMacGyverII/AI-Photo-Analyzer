@@ -12,9 +12,10 @@ NFT Metadata Rules:
 - Include artist vision or concept when relevant
 - Mention utility, unlockables, or benefits if applicable
 - Reference rarity percentages or edition information
-- Aim for 120-250 words
+- Use engaging, collectible-focused language (target 120-250 words)
+- Output ONLY the description text — NO structural headers, NO word counts, NO meta-commentary
 
-Key Elements:
+Key Elements (for your reference only, do NOT include these headers in output):
 
 **Artistic Description:**
 - Visual style and aesthetic

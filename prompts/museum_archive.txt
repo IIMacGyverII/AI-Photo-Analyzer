@@ -13,9 +13,10 @@ Museum/Archive Standards:
 - Include subject matter classification
 - Note any inscriptions, signatures, or markings
 - Reference related items or collections
-- Aim for 150-300 words, well-structured
+- Use professional academic tone (target 150-300 words)
+- Output ONLY the catalog description text — NO structural headers, NO word counts, NO meta-commentary
 
-Cataloging Structure:
+Cataloging Structure (for your reference only, do NOT include these headers in output):
 
 **Physical Description:**
 - Medium and materials

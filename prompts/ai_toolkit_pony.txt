@@ -14,11 +14,12 @@ Pony Diffusion-Specific Rules:
 
 General Rules:
 - Output ONLY plain descriptive text — no headers, no markdown, no bullet lists, no summaries, no JSON
+- NO word counts or meta-commentary like "this image shows" or "the description is"
 - Blend booru-style tags with natural language descriptions for best results
 - For character/subject training: describe pose, expression, clothing, accessories, but AVOID describing permanent features the trigger word should control (species, distinctive markings, core character design)
 - For style/art training: include art style descriptors (e.g., "anime style", "western cartoon", "painterly style")
-- Use tag-like phrases and natural sentences. Aim for 150–300 words
+- Use tag-like phrases and natural sentences (target 150–300 words)
 - If a trigger placeholder is needed, include the literal word [trigger] where the main subject/identity/style should be referenced
 - Include relevant booru tags like "detailed background", "simple background", "standing", "sitting", etc.
 
-Now, describe this image in detail:
+Describe this image in detail. Begin immediately:
