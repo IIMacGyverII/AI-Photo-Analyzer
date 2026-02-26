@@ -102,7 +102,43 @@ ollama-image-analyzer analyze image.jpg  # CLI mode
 
 ### Option 3: Use Pre-built Executables
 
-Download the executable for your platform from the releases page and run it directly. No Python installation required!
+Download the executable for your platform from the [releases page](https://github.com/IIMacGyverII/AI-Photo-Analyzer/releases) and run it directly. No Python installation required!
+
+---
+
+## 📚 How to Use
+
+### Quick Start Guide (5 Steps)
+
+1. **Install Ollama** (if not already installed)
+   ```bash
+   # Download from https://ollama.ai or use:
+   curl https://ollama.ai/install.sh | sh
+   ```
+
+2. **Pull a vision model**
+   ```bash
+   ollama pull llava    # or llava:13b, llava:34b, moondream, bakllava
+   ```
+
+3. **Download and run the application**
+   - Download `OllamaImageAnalyzer.exe` from the [latest release](https://github.com/IIMacGyverII/AI-Photo-Analyzer/releases)
+   - Double-click to launch (no installation needed)
+   - Or run from source: `python -m ollama_image_analyzer`
+
+4. **Analyze an image**
+   - Drag and drop an image onto the window
+   - Select a preset from the dropdown (or use Default)
+   - Click **"🔍 Analyze Image"**
+   - Wait for the AI analysis to complete
+
+5. **Find your results**
+   - Response appears in the preview panel
+   - Automatically saved as `[imagename].txt` and `[imagename].jpg.yml`
+   - Optional: Enable "📝 Write to image metadata" to embed results into EXIF/IPTC
+
+### Need More Details?
+See the complete [Usage Guide](#usage-guide) below for advanced features, batch processing, custom prompts, and PhotoPrism integration.
 
 ---
 
