@@ -77,6 +77,11 @@ def analyze(
         "-q",
         help="Suppress all output except errors",
     ),
+    no_overwrite: bool = typer.Option(
+        False,
+        "--no-overwrite",
+        help="Create numbered versions (_1, _2) instead of overwriting existing files",
+    ),
 ) -> None:
     """
     Analyze one or more images using Ollama vision models.
@@ -163,6 +168,19 @@ def analyze(
                     console.print(f"[yellow]Skipping unsupported file: {image_path.name}[/yellow]")
                 progress.advance(task)
                 continue
+            
+            # Check if output file exists when overwrite protection is enabled
+            if no_overwrite:
+                if output_dir:
+                    output_path = output_dir / f"{image_path.stem}.txt"
+                else:
+                    output_path = image_path.with_suffix(".txt")
+                
+                if output_path.exists():
+                    if not quiet:
+                        console.print(f"[yellow]Skipping {image_path.name} - output file already exists[/yellow]")
+                    progress.advance(task)
+                    continue
 
             progress.update(task, description=f"[cyan]Analyzing {image_path.name}...")
             
@@ -178,12 +196,20 @@ def analyze(
 
                 # Save result
                 try:
-                    saved_path = analyzer.save_result(result, output_path)
+                    saved_path = analyzer.save_result(result, output_path, overwrite=not no_overwrite)
                     success_count += 1
                     results_table.add_row(
                         image_path.name,
                         "[green]✓ Success[/green]",
                         str(saved_path.relative_to(Path.cwd()) if saved_path.is_relative_to(Path.cwd()) else saved_path)
+                    )
+                except ValueError as e:
+                    # Validation error
+                    error_count += 1
+                    results_table.add_row(
+                        image_path.name,
+                        "[red]✗ Validation failed[/red]",
+                        str(e)
                     )
                 except Exception as e:
                     error_count += 1

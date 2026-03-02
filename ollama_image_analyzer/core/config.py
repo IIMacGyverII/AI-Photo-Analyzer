@@ -37,6 +37,7 @@ class Config:
     # Analysis settings
     timeout_seconds: int = 300
     save_responses: bool = True
+    overwrite_existing_files: bool = True  # If False, creates numbered versions (_1, _2, etc.)
     
     # Internal
     _config_dir: Path = field(default_factory=lambda: Path(user_config_dir(PACKAGE_NAME)))

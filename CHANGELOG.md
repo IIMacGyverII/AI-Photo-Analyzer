@@ -5,6 +5,54 @@ All notable changes to Ollama Image Analyzer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.2] - 2026-03-01
+
+### Added
+- **Response Validation**: Automatic validation of AI-generated responses before saving
+  - Detects and prevents saving of empty or near-empty responses (minimum 20 characters)
+  - Prevents runaway generation by enforcing maximum length limit (10,000 words)
+  - Detects gibberish output by analyzing average word length and character patterns
+  - Identifies excessive repetition in responses (e.g., "word word word..." patterns)
+  - Validates that responses contain normal alphanumeric characters (at least 70%)
+- **Automatic Retry Logic**: Failed analyses automatically retry once before marking as failed
+  - If an image analysis fails for any reason, the system automatically retries once
+  - Status messages show when retries are occurring
+  - After batch completion, failed items can be manually retried via summary dialog
+  - "Retry Failed Items" button appears in batch summary when items fail twice
+- **Estimated Time to Completion**: Real-time ETA display during batch processing
+  - Progress bar shows estimated time remaining based on actual processing speed
+  - Updates after each image completes for accurate predictions
+  - Displays in seconds, minutes, or hours depending on remaining time
+  - Format: "5/20 - 25% - ETA: 2m 30s"
+- **File Overwrite Protection**: Optional protection against overwriting existing analysis files
+  - New "Overwrite existing files" setting in Settings dialog (enabled by default)
+  - When disabled, images with existing analysis files are skipped entirely (no re-analysis)
+  - When enabled, user receives warning dialog before overwriting with scrollable file list
+  - CLI supports `--no-overwrite` flag for batch processing protection
+  - Skip behavior clearly communicated with informative messages about which files were skipped
+- **Application Icon**: Custom icon for taskbar and window title bar
+  - Beautiful camera lens-themed icon with dark purple gradient
+  - Multi-size icon support (16x16 to 256x256) for crisp display at all sizes
+  - ICO file bundled with executable for Windows taskbar
+- **Improved Error Reporting**: Validation failures are clearly distinguished from save errors
+  - GUI shows specific validation error messages (e.g., "Response too short", "Response appears to be gibberish")
+  - CLI displays "[red]✗ Validation failed[/red]" status for failed validations
+  - Batch processing tracks validation failures separately and includes them in error reports
+
+### Changed
+- Single image analysis now checks for existing files before starting analysis
+- Batch processing filters out images with existing files when overwrite protection is enabled
+- Overwrite warnings show scrollable list when many files would be affected
+
+### Fixed
+- Empty text files no longer created when AI returns no content
+- Extremely long responses (runaway generation) now rejected before saving
+- Gibberish responses (random characters, very short words) now detected and rejected
+- Batch processing now properly marks images as failed when all save operations fail due to validation
+- Accidental data loss prevented by skip behavior when overwrite protection is enabled
+- Trigger word now properly updates before each batch analysis or single image analysis
+- Trigger word no longer reverts to "[trigger]" placeholder after changing between batches
+
 ## [1.1.0] - 2026-02-25
 
 ### Added

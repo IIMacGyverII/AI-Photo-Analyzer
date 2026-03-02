@@ -1,19 +1,23 @@
 """Main window for Ollama Image Analyzer GUI."""
 
 import logging
+import time
 from pathlib import Path
 from typing import Optional
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QAction, QKeySequence
+from PySide6.QtGui import QAction, QIcon, QKeySequence
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
+    QDialog,
+    QDialogButtonBox,
     QFileDialog,
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
     QLabel,
+    QListWidget,
     QMainWindow,
     QMessageBox,
     QProgressBar,
@@ -32,6 +36,7 @@ from ollama_image_analyzer.core import (
     get_config,
     save_config,
 )
+from ollama_image_analyzer.resources import ICON_PATH
 from .image_viewer import ImageViewer
 from .prompt_editor import PromptEditor
 from .settings_dialog import SettingsDialog
@@ -63,8 +68,12 @@ class MainWindow(QMainWindow):
         self.batch_total_eval_duration: int = 0
         self.batch_total_load_duration: int = 0
         
+        # Batch time tracking for ETA
+        self.batch_start_time: float = 0.0
+        self.batch_completed_count: int = 0
+        
         # Batch error tracking
-        self.batch_failed_items: list[tuple[str, str]] = []  # (filename, error_message)
+        self.batch_failed_items: list[tuple[Path, str, str]] = []  # (path, filename, error_message)
         
         self._setup_ui()
         self._setup_menu()
@@ -73,6 +82,10 @@ class MainWindow(QMainWindow):
         self._update_analyzer()
         
         self.setWindowTitle("Ollama Image Analyzer")
+        
+        # Set window icon
+        if ICON_PATH.exists():
+            self.setWindowIcon(QIcon(str(ICON_PATH)))
     
     def _setup_ui(self) -> None:
         """Set up the user interface."""
@@ -572,10 +585,46 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "No Image", "Please load an image first.")
             return
         
+        # Ensure trigger word and prompt are up to date
+        self.prompt_editor.refresh_trigger_replacement()
+        
         prompt = self.prompt_editor.get_prompt()
         if not prompt:
             QMessageBox.warning(self, "No Prompt", "Please enter a prompt.")
             return
+        
+        # Check for existing output file
+        if self.config.output_directory:
+            base_output = Path(self.config.output_directory) / self.image_viewer.current_image.stem
+        else:
+            base_output = self.image_viewer.current_image.with_suffix("")
+        
+        txt_path = Path(str(base_output) + ".txt")
+        
+        if txt_path.exists():
+            if not self.config.overwrite_existing_files:
+                # Skip analysis if overwrite is disabled
+                QMessageBox.information(
+                    self,
+                    "File Already Exists",
+                    f"Analysis file already exists:\n{txt_path.name}\n\n"
+                    "Overwrite protection is enabled. To analyze this image, either:\n"
+                    "• Enable 'Overwrite existing files' in Settings\n"
+                    "• Delete the existing file manually"
+                )
+                return
+            else:
+                # Warn user about overwriting
+                reply = QMessageBox.question(
+                    self,
+                    "Overwrite Existing File?",
+                    f"Analysis file already exists:\n{txt_path.name}\n\n"
+                    "Do you want to overwrite it?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.No
+                )
+                if reply != QMessageBox.StandardButton.Yes:
+                    return
         
         # Disable UI during analysis
         self.analyze_button.setEnabled(False)
@@ -648,16 +697,24 @@ class MainWindow(QMainWindow):
                 # Save YAML sidecar (PhotoPrism compatible)
                 if self.write_yaml_checkbox.isVisible() and self.write_yaml_checkbox.isChecked():
                     try:
-                        yaml_path = self.analyzer.save_yaml_sidecar(result, result.image_path)
+                        yaml_path = self.analyzer.save_yaml_sidecar(result, result.image_path, overwrite=self.config.overwrite_existing_files)
                         saved_files.append(f"YAML: {yaml_path.name}")
+                    except ValueError as e:
+                        # Validation error
+                        errors.append(f"YAML (validation failed): {str(e)}")
+                        logger.error(f"Validation failed: {e}")
                     except Exception as e:
                         errors.append(f"YAML sidecar: {str(e)}")
                         logger.error(f"Failed to save YAML sidecar: {e}")
                 
                 # Save .txt file (for backward compatibility)
                 try:
-                    txt_path = self.analyzer.save_result(result, Path(str(base_output) + ".txt"))
+                    txt_path = self.analyzer.save_result(result, Path(str(base_output) + ".txt"), overwrite=self.config.overwrite_existing_files)
                     saved_files.append(f"Text: {txt_path.name}")
+                except ValueError as e:
+                    # Validation error
+                    errors.append(f"Text file (validation failed): {str(e)}")
+                    logger.error(f"Validation failed: {e}")
                 except Exception as e:
                     errors.append(f"Text file: {str(e)}")
                     logger.error(f"Failed to save text file: {e}")
@@ -812,7 +869,66 @@ class MainWindow(QMainWindow):
             )
             return
         
+        # Check for existing output files
+        existing_files = []
+        images_to_process = []
+        
+        for img_path in image_paths:
+            if self.config.output_directory:
+                base_output = Path(self.config.output_directory) / img_path.stem
+            else:
+                base_output = img_path.with_suffix("")
+            
+            txt_path = Path(str(base_output) + ".txt")
+            
+            if txt_path.exists():
+                existing_files.append(txt_path.name)
+                if self.config.overwrite_existing_files:
+                    images_to_process.append(img_path)
+            else:
+                images_to_process.append(img_path)
+        
+        # Handle overwrite protection
+        if not self.config.overwrite_existing_files and existing_files:
+            skip_count = len(existing_files)
+            process_count = len(images_to_process)
+            
+            if process_count == 0:
+                QMessageBox.information(
+                    self,
+                    "All Files Exist",
+                    f"All {len(image_paths)} images already have analysis files.\n\n"
+                    "Overwrite protection is enabled. To re-analyze these images:\n"
+                    "• Enable 'Overwrite existing files' in Settings\n"
+                    "• Delete the existing analysis files"
+                )
+                return
+            else:
+                QMessageBox.information(
+                    self,
+                    "Skipping Existing Files",
+                    f"Found {len(image_paths)} images.\n\n"
+                    f"Skipping {skip_count} image(s) with existing analysis files.\n"
+                    f"Will process {process_count} new image(s).\n\n"
+                    "To process all files, enable 'Overwrite existing files' in Settings."
+                )
+            
+            # Update image_paths to only include images to process
+            image_paths = images_to_process
+        
+        elif self.config.overwrite_existing_files and existing_files:
+            # Show overwrite warning with scrollable list
+            dialog = OverwriteWarningDialog(existing_files, self)
+            if dialog.exec() != QDialog.DialogCode.Accepted:
+                return
+            
+            # User confirmed, use all images
+            image_paths = images_to_process
+        
         # Confirm batch operation
+        # First, ensure trigger word and prompt are up to date
+        self.prompt_editor.refresh_trigger_replacement()
+        
         prompt = self.prompt_editor.get_prompt()
         if not prompt:
             QMessageBox.warning(self, "No Prompt", "Please enter a prompt.")
@@ -854,6 +970,7 @@ class MainWindow(QMainWindow):
         self.batch_worker.started.connect(self._on_batch_started)
         self.batch_worker.item_started.connect(self._on_batch_item_started)
         self.batch_worker.item_finished.connect(self._on_batch_item_finished)
+        self.batch_worker.item_retry.connect(self._on_batch_item_retry)
         self.batch_worker.progress.connect(self._on_batch_progress)
         self.batch_worker.error.connect(self._on_batch_error)
         self.batch_worker.finished.connect(self._on_batch_finished)
@@ -874,6 +991,10 @@ class MainWindow(QMainWindow):
         self.batch_total_eval_duration = 0
         self.batch_total_load_duration = 0
         
+        # Reset time tracking
+        self.batch_start_time = time.time()
+        self.batch_completed_count = 0
+        
         # Reset error tracking
         self.batch_failed_items = []
         
@@ -882,9 +1003,9 @@ class MainWindow(QMainWindow):
     
     def _on_batch_item_started(self, current: int, total: int, filename: str, image_path: Path) -> None:
         """Handle batch item started."""
+        # Update progress bar with ETA
+        self._update_batch_progress_with_eta(current - 1, total)
         self._update_status(f"Analyzing {current}/{total}: {filename}")
-        self.progress_bar.setValue(current - 1)
-        self.progress_bar.setFormat(f"{current - 1}/{total} - %p%")
         
         # Load and display the current image
         try:
@@ -893,11 +1014,22 @@ class MainWindow(QMainWindow):
         except Exception as e:
             logger.error(f"Failed to load batch image {filename}: {e}")
     
+    def _on_batch_item_retry(self, filename: str, error_msg: str) -> None:
+        """Handle batch item retry notification."""
+        short_error = error_msg[:40] + "..." if len(error_msg) > 40 else error_msg
+        self._update_status(f"⚠️ Retrying {filename} (failed: {short_error})")
+        logger.info(f"Retrying {filename} after failure: {error_msg}")
+    
     def _on_batch_item_finished(self, result: AnalysisResult) -> None:
         """Handle batch item finished."""
+        # Update completion count and ETA
+        self.batch_completed_count += 1
+        self._update_batch_progress_with_eta(self.batch_completed_count, self.batch_total_count)
+        
         if result.success:
             # Save the result next to the image
             saved_files = []
+            save_errors = []
             
             try:
                 # Determine output base path
@@ -909,16 +1041,26 @@ class MainWindow(QMainWindow):
                 # Save YAML sidecar (PhotoPrism compatible)
                 if self.write_yaml_checkbox.isVisible() and self.write_yaml_checkbox.isChecked():
                     try:
-                        yaml_path = self.analyzer.save_yaml_sidecar(result, result.image_path)
+                        yaml_path = self.analyzer.save_yaml_sidecar(result, result.image_path, overwrite=self.config.overwrite_existing_files)
                         saved_files.append("YAML")
+                    except ValueError as e:
+                        # Validation error - this is critical
+                        save_errors.append(f"YAML validation: {str(e)}")
+                        logger.error(f"Validation failed for {result.image_path.name}: {e}")
                     except Exception as e:
+                        save_errors.append(f"YAML save: {str(e)}")
                         logger.error(f"Failed to save YAML sidecar for {result.image_path.name}: {e}")
                 
                 # Save .txt file (for backward compatibility)
                 try:
-                    txt_path = self.analyzer.save_result(result, Path(str(base_output) + ".txt"))
+                    txt_path = self.analyzer.save_result(result, Path(str(base_output) + ".txt"), overwrite=self.config.overwrite_existing_files)
                     saved_files.append("TXT")
+                except ValueError as e:
+                    # Validation error - this is critical
+                    save_errors.append(f"TXT validation: {str(e)}")
+                    logger.error(f"Validation failed for {result.image_path.name}: {e}")
                 except Exception as e:
+                    save_errors.append(f"TXT save: {str(e)}")
                     logger.error(f"Failed to save text file for {result.image_path.name}: {e}")
                 
                 # Optionally write to image metadata
@@ -929,9 +1071,20 @@ class MainWindow(QMainWindow):
                         else:
                             logger.warning(f"Failed to write metadata for {result.image_path.name}")
                     except Exception as e:
+                        save_errors.append(f"EXIF: {str(e)}")
                         logger.error(f"Failed to write image metadata for {result.image_path.name}: {e}")
                 
-                logger.info(f"Batch item complete: {result.image_path.name} -> Saved: {', '.join(saved_files)}")
+                # If no files were saved successfully, treat this as a failure
+                if not saved_files:
+                    error_msg = "All save operations failed: " + "; ".join(save_errors)
+                    logger.error(f"Complete save failure for {result.image_path.name}: {error_msg}")
+                    self.batch_failed_items.append((result.image_path, result.image_path.name, error_msg))
+                    self._update_status(f"❌ Failed to save {result.image_path.name}: {error_msg}")
+                else:
+                    logger.info(f"Batch item complete: {result.image_path.name} -> Saved: {', '.join(saved_files)}")
+                    if save_errors:
+                        # Some saves failed but at least one succeeded
+                        logger.warning(f"Partial save for {result.image_path.name} - Errors: {'; '.join(save_errors)}")
                 
                 # Display the response
                 self.response_preview.setPlainText(result.response)
@@ -954,13 +1107,46 @@ class MainWindow(QMainWindow):
             except Exception as e:
                 error_msg = f"Save error: {str(e)}"
                 logger.error(f"Failed to save batch result for {result.image_path.name}: {e}")
-                self.batch_failed_items.append((result.image_path.name, error_msg))
+                self.batch_failed_items.append((result.image_path, result.image_path.name, error_msg))
                 self._update_status(f"⚠️ Error saving {result.image_path.name}: {error_msg}")
         else:
             error_msg = result.error or "Unknown error"
             logger.error(f"Batch item failed: {result.image_path.name} - {error_msg}")
-            self.batch_failed_items.append((result.image_path.name, error_msg))
+            self.batch_failed_items.append((result.image_path, result.image_path.name, error_msg))
             self._update_status(f"❌ Failed: {result.image_path.name} - {error_msg}")
+    
+    def _update_batch_progress_with_eta(self, completed: int, total: int) -> None:
+        """Update progress bar with completion count and estimated time remaining.
+        
+        Args:
+            completed: Number of images completed so far.
+            total: Total number of images to process.
+        """
+        self.progress_bar.setValue(completed)
+        
+        if completed == 0:
+            # No time data yet
+            self.progress_bar.setFormat(f"{completed}/{total} - %p%")
+        else:
+            # Calculate ETA
+            elapsed_time = time.time() - self.batch_start_time
+            avg_time_per_image = elapsed_time / completed
+            remaining_images = total - completed
+            estimated_seconds = avg_time_per_image * remaining_images
+            
+            # Format ETA nicely
+            if estimated_seconds < 60:
+                eta_str = f"{int(estimated_seconds)}s"
+            elif estimated_seconds < 3600:
+                minutes = int(estimated_seconds / 60)
+                seconds = int(estimated_seconds % 60)
+                eta_str = f"{minutes}m {seconds}s"
+            else:
+                hours = int(estimated_seconds / 3600)
+                minutes = int((estimated_seconds % 3600) / 60)
+                eta_str = f"{hours}h {minutes}m"
+            
+            self.progress_bar.setFormat(f"{completed}/{total} - %p% - ETA: {eta_str}")
     
     def _on_batch_progress(self, percentage: int) -> None:
         """Handle batch progress update."""
@@ -1008,7 +1194,7 @@ class MainWindow(QMainWindow):
             # Add details about failed items
             if self.batch_failed_items:
                 summary += f"\n❌ Failed items:\n"
-                for filename, error_msg in self.batch_failed_items[:5]:  # Show first 5 errors
+                for image_path, filename, error_msg in self.batch_failed_items[:5]:  # Show first 5 errors
                     # Truncate long error messages
                     short_error = error_msg[:60] + "..." if len(error_msg) > 60 else error_msg
                     summary += f"  • {filename}: {short_error}\n"
@@ -1034,17 +1220,79 @@ class MainWindow(QMainWindow):
             self._update_status(f"✓ Batch complete: {successful}/{processed} successful")
             title = "Batch Analysis Complete"
         
-        QMessageBox.information(
-            self,
-            title,
-            summary
-        )
+        # Show summary with retry option if there are failed items
+        if self.batch_failed_items:
+            dialog = BatchSummaryDialog(title, summary, self.batch_failed_items, self)
+            result = dialog.exec()
+            
+            if result == QDialog.DialogCode.Accepted and dialog.should_retry:
+                # User wants to retry failed items
+                self._retry_failed_items()
+        else:
+            QMessageBox.information(self, title, summary)
         
         # Hide average metrics section
         self.avg_label.setVisible(False)
         
         self.response_preview.clear()
         self.batch_total_count = 0  # Reset counter
+        self.batch_completed_count = 0  # Reset time tracking
+        self.batch_start_time = 0.0
+    
+    def _retry_failed_items(self) -> None:
+        """Retry processing failed items from the last batch."""
+        if not self.batch_failed_items:
+            return
+        
+        # Extract paths from failed items
+        failed_paths = [path for path, filename, error in self.batch_failed_items]
+        
+        # Get the prompt used for the batch (from prompt editor)
+        # First, ensure trigger word and prompt are up to date
+        self.prompt_editor.refresh_trigger_replacement()
+        
+        prompt = self.prompt_editor.get_prompt()
+        if not prompt:
+            QMessageBox.warning(self, "No Prompt", "Please enter a prompt before retrying.")
+            return
+        
+        # Clear the failed items list (will be repopulated during retry)
+        self.batch_failed_items = []
+        
+        # Reset time tracking for retry
+        self.batch_start_time = time.time()
+        self.batch_completed_count = 0
+        
+        # Disable UI during batch analysis
+        self.analyze_button.setEnabled(False)
+        self.import_button.setEnabled(False)
+        self.batch_button.setEnabled(False)
+        self.cancel_button.setVisible(True)
+        self.progress_bar.setVisible(True)
+        self.progress_bar.setRange(0, len(failed_paths))
+        self.progress_bar.setValue(0)
+        
+        # Store total count for completion summary
+        self.batch_total_count = len(failed_paths)
+        
+        logger.info(f"Retrying {len(failed_paths)} failed items")
+        
+        # Create and start batch worker for failed items
+        self.batch_worker = BatchAnalysisWorker(
+            failed_paths,
+            prompt,
+            self.analyzer
+        )
+        
+        self.batch_worker.started.connect(self._on_batch_started)
+        self.batch_worker.item_started.connect(self._on_batch_item_started)
+        self.batch_worker.item_finished.connect(self._on_batch_item_finished)
+        self.batch_worker.item_retry.connect(self._on_batch_item_retry)
+        self.batch_worker.progress.connect(self._on_batch_progress)
+        self.batch_worker.error.connect(self._on_batch_error)
+        self.batch_worker.finished.connect(self._on_batch_finished)
+        
+        self.batch_worker.start()
     
     def _cancel_analysis(self) -> None:
         """Cancel the current analysis operation."""
@@ -1140,3 +1388,102 @@ class MainWindow(QMainWindow):
             self.current_worker.wait()
         
         event.accept()
+
+
+class BatchSummaryDialog(QDialog):
+    """Dialog to show batch analysis summary with retry option."""
+    
+    def __init__(
+        self, 
+        title: str, 
+        summary: str, 
+        failed_items: list[tuple[Path, str, str]], 
+        parent: Optional[QWidget] = None
+    ) -> None:
+        """Initialize the batch summary dialog.
+        
+        Args:
+            title: Dialog title.
+            summary: Summary text to display.
+            failed_items: List of (path, filename, error) tuples for failed items.
+            parent: Parent widget.
+        """
+        super().__init__(parent)
+        
+        self.failed_items = failed_items
+        self.should_retry = False
+        
+        self.setWindowTitle(title)
+        self.setMinimumWidth(600)
+        self.setMinimumHeight(400)
+        
+        layout = QVBoxLayout(self)
+        
+        # Summary message
+        summary_label = QLabel(summary)
+        summary_label.setWordWrap(True)
+        summary_label.setTextFormat(Qt.TextFormat.PlainText)
+        layout.addWidget(summary_label)
+        
+        # Buttons
+        button_box = QDialogButtonBox()
+        
+        if failed_items:
+            # Add retry button for failed items
+            retry_button = button_box.addButton("Retry Failed Items", QDialogButtonBox.ButtonRole.AcceptRole)
+            retry_button.setToolTip(f"Retry analyzing the {len(failed_items)} failed image(s)")
+            retry_button.clicked.connect(self._on_retry_clicked)
+        
+        close_button = button_box.addButton("Close", QDialogButtonBox.ButtonRole.RejectRole)
+        close_button.clicked.connect(self.reject)
+        
+        layout.addWidget(button_box)
+    
+    def _on_retry_clicked(self) -> None:
+        """Handle retry button clicked."""
+        self.should_retry = True
+        self.accept()
+
+
+class OverwriteWarningDialog(QDialog):
+    """Dialog to warn user about overwriting existing files."""
+    
+    def __init__(self, file_names: list[str], parent: Optional[QWidget] = None) -> None:
+        """Initialize the overwrite warning dialog.
+        
+        Args:
+            file_names: List of file names that will be overwritten.
+            parent: Parent widget.
+        """
+        super().__init__(parent)
+        
+        self.setWindowTitle("Overwrite Existing Files?")
+        self.setMinimumWidth(500)
+        self.setMinimumHeight(400)
+        
+        layout = QVBoxLayout(self)
+        
+        # Warning message
+        message = QLabel(
+            f"<b>Warning:</b> {len(file_names)} analysis file(s) already exist and will be overwritten.\n\n"
+            "Do you want to continue?"
+        )
+        message.setWordWrap(True)
+        layout.addWidget(message)
+        
+        # Scrollable list of files
+        list_label = QLabel("Files that will be overwritten:")
+        layout.addWidget(list_label)
+        
+        file_list = QListWidget()
+        for file_name in sorted(file_names):
+            file_list.addItem(file_name)
+        layout.addWidget(file_list)
+        
+        # Buttons
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Yes | QDialogButtonBox.StandardButton.No
+        )
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        layout.addWidget(button_box)

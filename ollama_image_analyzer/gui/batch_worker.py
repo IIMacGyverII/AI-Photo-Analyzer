@@ -19,6 +19,7 @@ class BatchAnalysisWorker(QThread):
     finished = Signal(int, int)  # total, successful
     item_started = Signal(int, int, str, object)  # current, total, filename, path
     item_finished = Signal(AnalysisResult)
+    item_retry = Signal(str, str)  # filename, error_message (emitted when retrying)
     progress = Signal(int)  # Progress percentage (0-100)
     error = Signal(str)  # Error message
 
@@ -76,6 +77,20 @@ class BatchAnalysisWorker(QThread):
                     logger.info(f"Analyzing {current}/{total}: {image_path.name}")
                     result = self.analyzer.analyze_image(image_path, self.prompt)
                     
+                    # If analysis failed, retry once
+                    if not result.success:
+                        error_msg = result.error or "Unknown error"
+                        logger.warning(f"Analysis failed for {image_path.name}: {error_msg}. Retrying...")
+                        self.item_retry.emit(image_path.name, error_msg)
+                        
+                        # Retry the analysis
+                        result = self.analyzer.analyze_image(image_path, self.prompt)
+                        
+                        if result.success:
+                            logger.info(f"Retry successful for {image_path.name}")
+                        else:
+                            logger.error(f"Retry also failed for {image_path.name}: {result.error}")
+                    
                     processed += 1
                     
                     if result.success:
@@ -88,16 +103,34 @@ class BatchAnalysisWorker(QThread):
                     self.item_finished.emit(result)
                 
                 except Exception as e:
-                    logger.error(f"Error analyzing {image_path.name}: {e}", exc_info=True)
-                    processed += 1
-                    error_result = AnalysisResult(
-                        success=False,
-                        response="",
-                        model=self.analyzer.model,
-                        error=str(e),
-                        image_path=image_path
-                    )
-                    self.item_finished.emit(error_result)
+                    # Exception during analysis - retry once
+                    logger.error(f"Exception analyzing {image_path.name}: {e}. Retrying...", exc_info=True)
+                    self.item_retry.emit(image_path.name, str(e))
+                    
+                    try:
+                        # Retry the analysis
+                        result = self.analyzer.analyze_image(image_path, self.prompt)
+                        
+                        if result.success:
+                            successful += 1
+                            logger.info(f"Retry successful for {image_path.name}")
+                        else:
+                            logger.error(f"Retry also failed for {image_path.name}: {result.error}")
+                        
+                        processed += 1
+                        self.item_finished.emit(result)
+                        
+                    except Exception as retry_error:
+                        logger.error(f"Retry also threw exception for {image_path.name}: {retry_error}", exc_info=True)
+                        processed += 1
+                        error_result = AnalysisResult(
+                            success=False,
+                            response="",
+                            model=self.analyzer.model,
+                            error=f"Failed twice: {str(e)}; {str(retry_error)}",
+                            image_path=image_path
+                        )
+                        self.item_finished.emit(error_result)
             
             # Batch complete (or stopped)
             if self._should_stop:

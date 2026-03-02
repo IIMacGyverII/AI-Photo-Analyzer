@@ -6,9 +6,10 @@ with vision models.
 
 import base64
 import logging
+import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Tuple
 from datetime import datetime
 
 import ollama
@@ -88,6 +89,33 @@ class OllamaAnalyzer:
         if self._client is None:
             self._client = Client(host=self.host, timeout=self.timeout)
         return self._client
+
+    def _get_numbered_path(self, original_path: Path) -> Path:
+        """
+        Generate a numbered file path if the original exists.
+        
+        Args:
+            original_path: The original file path.
+            
+        Returns:
+            A new path with a number suffix (e.g., file_1.txt, file_2.txt).
+        """
+        if not original_path.exists():
+            return original_path
+        
+        stem = original_path.stem
+        suffix = original_path.suffix
+        parent = original_path.parent
+        
+        counter = 1
+        while True:
+            new_path = parent / f"{stem}_{counter}{suffix}"
+            if not new_path.exists():
+                return new_path
+            counter += 1
+            # Safety limit to prevent infinite loop
+            if counter > 9999:
+                raise IOError(f"Too many numbered files for {original_path.name}")
 
     def test_connection(self) -> bool:
         """
@@ -294,10 +322,70 @@ class OllamaAnalyzer:
                 image_path=image_path,
             )
 
+    def validate_response(
+        self,
+        response: str,
+        min_chars: int = 20,
+        max_words: int = 10000,
+        min_avg_word_length: float = 2.0,
+    ) -> Tuple[bool, Optional[str]]:
+        """
+        Validate that a response looks reasonable and not corrupted.
+
+        Args:
+            response: The response text to validate.
+            min_chars: Minimum character count (default 20).
+            max_words: Maximum word count to prevent runaway generation (default 10000).
+            min_avg_word_length: Minimum average word length to detect gibberish (default 2.0).
+
+        Returns:
+            Tuple of (is_valid, error_message). If valid, error_message is None.
+        """
+        if not response or not response.strip():
+            return False, "Response is empty"
+        
+        response = response.strip()
+        
+        # Check minimum length
+        if len(response) < min_chars:
+            return False, f"Response too short ({len(response)} chars, minimum {min_chars})"
+        
+        # Count words
+        words = response.split()
+        word_count = len(words)
+        
+        # Check maximum word count
+        if word_count > max_words:
+            return False, f"Response too long ({word_count} words, maximum {max_words})"
+        
+        # Check for gibberish - calculate average word length
+        if words:
+            # Filter out very short "words" (likely punctuation)
+            meaningful_words = [w for w in words if len(w) > 1]
+            if meaningful_words:
+                avg_word_length = sum(len(w) for w in meaningful_words) / len(meaningful_words)
+                if avg_word_length < min_avg_word_length:
+                    return False, f"Response appears to be gibberish (avg word length: {avg_word_length:.1f})"
+        
+        # Check for excessive non-alphanumeric characters (gibberish detection)
+        alphanumeric_chars = sum(c.isalnum() or c.isspace() for c in response)
+        if alphanumeric_chars / len(response) < 0.7:  # Less than 70% normal characters
+            return False, "Response contains excessive special characters (possible gibberish)"
+        
+        # Check for repetitive patterns (e.g., "word word word word...")
+        if len(words) >= 10:
+            # Check if more than 50% of words are the same
+            unique_words = set(w.lower() for w in words)
+            if len(unique_words) / len(words) < 0.3:
+                return False, "Response contains excessive repetition"
+        
+        return True, None
+
     def save_result(
         self,
         result: AnalysisResult,
         output_path: Optional[Path] = None,
+        overwrite: bool = True,
     ) -> Path:
         """
         Save analysis result to a text file.
@@ -305,21 +393,35 @@ class OllamaAnalyzer:
         Args:
             result: The analysis result to save.
             output_path: Where to save (if None, saves next to image with .txt extension).
+            overwrite: If False and file exists, will create numbered version (file_1.txt, file_2.txt, etc.).
 
         Returns:
             Path where the result was saved.
 
         Raises:
             IOError: If unable to save the file.
+            ValueError: If the result is invalid or response validation fails.
         """
         if not result.success:
             raise ValueError("Cannot save a failed analysis result")
+
+        # Validate response content before saving
+        is_valid, validation_error = self.validate_response(result.response)
+        if not is_valid:
+            error_msg = f"Response validation failed: {validation_error}"
+            logger.warning(error_msg)
+            raise ValueError(error_msg)
 
         # Determine output path
         if output_path is None:
             if result.image_path is None:
                 raise ValueError("Cannot determine output path: no image_path in result")
             output_path = result.image_path.with_suffix(".txt")
+
+        # Check if file exists and handle accordingly
+        if not overwrite and output_path.exists():
+            output_path = self._get_numbered_path(output_path)
+            logger.info(f"File exists, using numbered path: {output_path}")
 
         try:
             output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -338,6 +440,7 @@ class OllamaAnalyzer:
         self,
         result: AnalysisResult,
         output_path: Optional[Path] = None,
+        overwrite: bool = True,
     ) -> Path:
         """
         Save analysis result as PhotoPrism-compatible YAML sidecar file.
@@ -345,21 +448,35 @@ class OllamaAnalyzer:
         Args:
             result: The analysis result to save.
             output_path: Where to save (if None, saves next to image as .yml).
+            overwrite: If False and file exists, will create numbered version (file.jpg_1.yml, file.jpg_2.yml, etc.).
 
         Returns:
             Path where the YAML file was saved.
 
         Raises:
             IOError: If unable to save the file.
+            ValueError: If the result is invalid or response validation fails.
         """
         if not result.success:
             raise ValueError("Cannot save a failed analysis result")
+
+        # Validate response content before saving
+        is_valid, validation_error = self.validate_response(result.response)
+        if not is_valid:
+            error_msg = f"Response validation failed: {validation_error}"
+            logger.warning(error_msg)
+            raise ValueError(error_msg)
 
         # Determine output path
         if output_path is None:
             if result.image_path is None:
                 raise ValueError("Cannot determine output path: no image_path in result")
             output_path = result.image_path.with_suffix(result.image_path.suffix + ".yml")
+
+        # Check if file exists and handle accordingly
+        if not overwrite and output_path.exists():
+            output_path = self._get_numbered_path(output_path)
+            logger.info(f"YAML file exists, using numbered path: {output_path}")
 
         try:
             output_path.parent.mkdir(parents=True, exist_ok=True)

@@ -98,6 +98,14 @@ class SettingsDialog(QDialog):
         
         output_layout.addRow("Output Directory:", dir_layout)
         
+        # Overwrite existing files checkbox
+        self.overwrite_checkbox = QCheckBox("Overwrite existing files")
+        self.overwrite_checkbox.setToolTip(
+            "When enabled, new analyses will overwrite existing .txt and .yml files.\n"
+            "When disabled, numbered versions will be created (file_1.txt, file_2.txt, etc.)"
+        )
+        output_layout.addRow("", self.overwrite_checkbox)
+        
         layout.addWidget(output_group)
         
         # Test connection button
@@ -248,4 +256,5 @@ class SettingsDialog(QDialog):
             "ollama_model": self.model_combo.currentText().strip() or "llava",
             "timeout_seconds": self.timeout_spin.value(),
             "output_directory": self.output_dir_input.text().strip() or None,
+            "overwrite_existing_files": self.overwrite_checkbox.isChecked(),
         }

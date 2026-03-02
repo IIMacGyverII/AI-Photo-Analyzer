@@ -49,12 +49,18 @@
 - **Real-time status panel** showing connection status and current model
 - **Quick model switching** via dropdown (no need to open Settings)
 - **Performance metrics** - Always-visible panel showing speed, tokens, and timing
-- **Batch folder analysis** - Process entire folders of images at once
+- **Batch folder analysis** - Process entire folders of images at once with ETA
+- **Estimated time to completion** - Real-time ETA updates based on actual processing speed
+- **Automatic retry logic** - Failed analyses automatically retry once before marking as failed
+- **Response validation** - Prevents empty, gibberish, or runaway responses from being saved
+- **File overwrite protection** - Optional protection with skip or warning modes
 - **Batch error tracking** - Real-time status updates and detailed failure reports
+- **Retry failed items** - Manually retry failed batch items after completion
 - **Settings dialog** with connection testing and model refresh
 - **Keyboard shortcuts** for common actions (Ctrl+O, Ctrl+,)
 - **Progress tracking** with detailed status for batch operations
 - **Configuration persistence** across sessions
+- **Custom application icon** for taskbar and window
 - **Cross-platform** directory management using platformdirs
 
 ---
@@ -72,6 +78,47 @@ JPG, JPEG, PNG, WEBP, GIF, BMP, TIFF
 - Windows 10/11
 - macOS 11+ (Big Sur and later)
 - Ubuntu 20.04+ / Debian 11+ / Fedora 35+
+
+---
+
+## 🎯 Recommended Ollama Vision Models
+
+These models have been tested and work well for image analysis:
+
+### Best Overall Performance
+- **llava:13b** - Excellent balance of speed and quality (Recommended)
+- **llava:34b** - Best quality, requires more resources (16GB+ RAM)
+- **llava:7b** (default) - Fast, good for basic descriptions (8GB RAM)
+
+### Specialized Models
+- **llava-phi3** - Ultra-fast, lightweight (3.8B params, great for batch processing)
+- **llava-llama3** - Built on Llama 3, strong reasoning capabilities
+- **bakllava** - Good for detailed technical descriptions
+- **moondream** - Tiny model (1.6B params), fast but less detailed
+
+### How to Install
+```bash
+# Recommended for most users:
+ollama pull llava:13b
+
+# Or try the default 7B version:
+ollama pull llava
+
+# For resource-constrained systems:
+ollama pull llava-phi3
+
+# For maximum quality (requires 16GB+ RAM):
+ollama pull llava:34b
+```
+
+### Model Comparison
+| Model | Size | RAM Required | Speed | Quality | Best For |
+|-------|------|--------------|-------|---------|----------|
+| llava:7b | ~4GB | 8GB+ | Fast | Good | General use |
+| llava:13b | ~8GB | 12GB+ | Medium | Excellent | ⭐ Recommended |
+| llava:34b | ~20GB | 24GB+ | Slower | Best | Professional work |
+| llava-phi3 | ~2GB | 4GB+ | Very Fast | Good | Batch processing |
+| moondream | ~1GB | 3GB+ | Very Fast | Basic | Quick descriptions |
 
 ---
 

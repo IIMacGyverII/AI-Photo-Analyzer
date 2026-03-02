@@ -495,6 +495,17 @@ class PromptEditor(QWidget):
         """Get the current prompt text."""
         return self.prompt_edit.toPlainText().strip()
     
+    def refresh_trigger_replacement(self) -> None:
+        """Refresh trigger word replacement to ensure it's up to date.
+        
+        This should be called before getting the prompt for batch operations
+        to ensure any trigger word changes are properly applied.
+        """
+        if self._current_preset_path and self._current_preset_path.stem == "ai_toolkit":
+            # Re-apply trigger replacement with current trigger word
+            self._apply_trigger_replacement()
+            logger.debug(f"Refreshed trigger replacement: trigger='{self.trigger_input.text().strip()}'")
+    
     def get_current_preset_name(self) -> str:
         """Get the current preset name (stem without extension)."""
         if self._current_preset_path:
