@@ -52,6 +52,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Accidental data loss prevented by skip behavior when overwrite protection is enabled
 - Trigger word now properly updates before each batch analysis or single image analysis
 - Trigger word no longer reverts to "[trigger]" placeholder after changing between batches
+- Custom saved presets now persist across sessions when running from executable
+- Presets are now saved to user data directory (writable location) instead of bundled directory
+- Custom presets marked with ★ star indicator in preset dropdown
 
 ## [1.1.0] - 2026-02-25
 

@@ -4,6 +4,7 @@ import logging
 from pathlib import Path
 from typing import Optional
 
+from platformdirs import user_data_dir
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QComboBox,
@@ -20,6 +21,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ollama_image_analyzer import PACKAGE_NAME
 from ollama_image_analyzer.core import PromptManager
 
 logger = logging.getLogger(__name__)
@@ -40,6 +42,12 @@ class PromptEditor(QWidget):
         self.prompt_manager = PromptManager()
         self._current_preset_path: Optional[Path] = None
         self._base_prompt: Optional[str] = None  # Store original prompt for trigger replacement
+        
+        # Set up user presets directory (writable location for custom presets)
+        self._user_presets_dir = Path(user_data_dir(PACKAGE_NAME)) / "prompts"
+        self._user_presets_dir.mkdir(parents=True, exist_ok=True)
+        logger.info(f"User presets directory: {self._user_presets_dir}")
+        
         self._setup_ui()
         self._refresh_presets()
         self._load_default_prompt()
@@ -160,16 +168,16 @@ class PromptEditor(QWidget):
             self.prompt_edit.setPlainText("Describe this image in detail.")
     
     def _refresh_presets(self) -> None:
-        """Refresh the list of available presets."""
+        """Refresh the list of available presets from both bundled and user directories."""
         try:
-            # Find prompts directory
-            prompts_dir = Path("prompts")
-            if not prompts_dir.exists():
+            # Find bundled prompts directory
+            bundled_prompts_dir = Path("prompts")
+            if not bundled_prompts_dir.exists():
                 # Try relative to package
                 for parent in Path(__file__).parents:
                     test_dir = parent / "prompts"
                     if test_dir.exists():
-                        prompts_dir = test_dir
+                        bundled_prompts_dir = test_dir
                         break
             
             # Block signals to prevent triggering on_preset_selected
@@ -178,19 +186,44 @@ class PromptEditor(QWidget):
             # Clear and repopulate
             self.preset_combo.clear()
             
-            if prompts_dir.exists():
-                # Get all .txt files
-                preset_files = sorted(prompts_dir.glob("*.txt"))
+            # Collect presets from both locations
+            preset_files = []
+            
+            # Add bundled presets (built-in, read-only)
+            if bundled_prompts_dir.exists():
+                preset_files.extend(sorted(bundled_prompts_dir.glob("*.txt")))
+            
+            # Add user presets (custom, writable)
+            if self._user_presets_dir.exists():
+                user_preset_files = sorted(self._user_presets_dir.glob("*.txt"))
+                # Mark user presets with their full path to distinguish them
+                preset_files.extend(user_preset_files)
+            
+            # Remove duplicates (prefer user presets over bundled)
+            seen_names = set()
+            unique_presets = []
+            for preset_file in reversed(preset_files):  # Reverse so user presets are checked first
+                stem = preset_file.stem
+                if stem not in seen_names:
+                    seen_names.add(stem)
+                    unique_presets.append(preset_file)
+            
+            unique_presets.reverse()  # Restore original order
+            
+            for preset_file in unique_presets:
+                # Skip AI Toolkit variant files (they're accessed via Model Type dropdown)
+                # Keep ai_toolkit.txt, but skip ai_toolkit_flux.txt, ai_toolkit_sdxl.txt, etc.
+                if preset_file.stem.startswith("ai_toolkit_"):
+                    continue
                 
-                for preset_file in preset_files:
-                    # Skip AI Toolkit variant files (they're accessed via Model Type dropdown)
-                    # Keep ai_toolkit.txt, but skip ai_toolkit_flux.txt, ai_toolkit_sdxl.txt, etc.
-                    if preset_file.stem.startswith("ai_toolkit_"):
-                        continue
-                    
-                    # Use filename without extension as display name
-                    display_name = preset_file.stem.replace("_", " ").title()
-                    self.preset_combo.addItem(display_name, preset_file)
+                # Use filename without extension as display name
+                display_name = preset_file.stem.replace("_", " ").title()
+                
+                # Add indicator for user presets
+                if preset_file.parent == self._user_presets_dir:
+                    display_name += " ★"  # Star to indicate custom preset
+                
+                self.preset_combo.addItem(display_name, preset_file)
             
             # Restore signals
             self.preset_combo.blockSignals(False)
@@ -198,7 +231,7 @@ class PromptEditor(QWidget):
             # Update selection to match current preset
             self._update_preset_selection()
             
-            logger.info(f"Refreshed {self.preset_combo.count()} presets")
+            logger.info(f"Refreshed {self.preset_combo.count()} presets (bundled + user)")
             
         except Exception as e:
             logger.error(f"Failed to refresh presets: {e}")
@@ -253,7 +286,7 @@ class PromptEditor(QWidget):
             )
     
     def _save_as_preset(self) -> None:
-        """Save the current prompt as a new preset."""
+        """Save the current prompt as a new preset in user directory."""
         prompt = self.get_prompt()
         
         if not prompt.strip():
@@ -280,19 +313,8 @@ class PromptEditor(QWidget):
         if not preset_name.endswith(".txt"):
             preset_name += ".txt"
         
-        # Find prompts directory
-        prompts_dir = Path("prompts")
-        if not prompts_dir.exists():
-            for parent in Path(__file__).parents:
-                test_dir = parent / "prompts"
-                if test_dir.exists():
-                    prompts_dir = test_dir
-                    break
-        
-        if not prompts_dir.exists():
-            prompts_dir.mkdir(parents=True, exist_ok=True)
-        
-        preset_path = prompts_dir / preset_name
+        # Always save to user presets directory (writable location)
+        preset_path = self._user_presets_dir / preset_name
         
         # Check if file exists
         if preset_path.exists():
@@ -314,7 +336,7 @@ class PromptEditor(QWidget):
             QMessageBox.information(
                 self,
                 "Success",
-                f"Preset saved as:\n{preset_name}"
+                f"Preset saved as:\n{preset_name}\n\nLocation: {preset_path.parent.name}/"
             )
         except Exception as e:
             logger.error(f"Failed to save preset: {e}")
