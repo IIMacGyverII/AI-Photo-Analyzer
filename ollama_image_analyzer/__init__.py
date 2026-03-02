@@ -5,7 +5,7 @@ A polished desktop app with both GUI and CLI modes for analyzing images
 using Ollama vision models with fully customizable prompts.
 """
 
-__version__ = "1.1.2"
+__version__ = "1.1.3"
 __author__ = "Your Name"
 __license__ = "MIT"
 

@@ -5,6 +5,22 @@ All notable changes to Ollama Image Analyzer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.3] - 2026-03-01
+
+### Changed
+- **Faster Startup Time**: Executable now uses one-directory mode instead of one-file mode
+  - Startup time improved by 2-5x (no extraction to temp folder on each launch)
+  - Distribution includes OllamaImageAnalyzer folder with main .exe and _internal dependencies
+  - Total size ~138 MB (10.26 MB executable + 128.42 MB dependencies)
+- **Overwrite Setting on Main Screen**: Moved "Overwrite existing files" checkbox from Settings to main UI
+  - Now appears alongside YAML and metadata checkboxes for easy access during workflow
+  - Changes automatically save to config - no need to open Settings
+  - Settings dialog still updates config, changes sync with main screen checkbox
+
+### Fixed
+- Settings dialog no longer fails to open due to missing QCheckBox import
+- Overwrite checkbox state properly loaded from config file on startup
+
 ## [1.1.2] - 2026-03-01
 
 ### Added

@@ -349,6 +349,19 @@ class MainWindow(QMainWindow):
         self.write_metadata_checkbox.setVisible(False)  # Hidden by default until preset selected
         checkbox_row.addWidget(self.write_metadata_checkbox)
         
+        checkbox_row.addStretch()
+        
+        # Overwrite existing files checkbox
+        self.overwrite_checkbox = QCheckBox("🔄 Overwrite existing files")
+        self.overwrite_checkbox.setStyleSheet(checkbox_style)
+        self.overwrite_checkbox.setToolTip(
+            "When enabled, new analyses will overwrite existing .txt and .yml files.\n"
+            "When disabled, numbered versions will be created (file_1.txt, file_2.txt, etc.)"
+        )
+        self.overwrite_checkbox.setChecked(self.config.overwrite_existing_files)
+        self.overwrite_checkbox.stateChanged.connect(self._on_overwrite_checkbox_changed)
+        checkbox_row.addWidget(self.overwrite_checkbox)
+        
         right_layout.addLayout(checkbox_row)
         
         # Set initial checkbox visibility based on default preset
@@ -486,6 +499,11 @@ class MainWindow(QMainWindow):
         if show_yaml and not self.write_yaml_checkbox.isChecked():
             self.write_yaml_checkbox.setChecked(True)  # YAML on by default when visible
     
+    def _on_overwrite_checkbox_changed(self) -> None:
+        """Handle overwrite checkbox change to sync with config."""
+        self.config.overwrite_existing_files = self.overwrite_checkbox.isChecked()
+        save_config()
+    
     def _update_connection_status(self) -> None:
         """Update the connection status display."""
         if self.analyzer is None:
@@ -602,14 +620,14 @@ class MainWindow(QMainWindow):
         txt_path = Path(str(base_output) + ".txt")
         
         if txt_path.exists():
-            if not self.config.overwrite_existing_files:
+            if not self.overwrite_checkbox.isChecked():
                 # Skip analysis if overwrite is disabled
                 QMessageBox.information(
                     self,
                     "File Already Exists",
                     f"Analysis file already exists:\n{txt_path.name}\n\n"
                     "Overwrite protection is enabled. To analyze this image, either:\n"
-                    "• Enable 'Overwrite existing files' in Settings\n"
+                    "• Enable 'Overwrite existing files'\n"
                     "• Delete the existing file manually"
                 )
                 return
@@ -697,7 +715,7 @@ class MainWindow(QMainWindow):
                 # Save YAML sidecar (PhotoPrism compatible)
                 if self.write_yaml_checkbox.isVisible() and self.write_yaml_checkbox.isChecked():
                     try:
-                        yaml_path = self.analyzer.save_yaml_sidecar(result, result.image_path, overwrite=self.config.overwrite_existing_files)
+                        yaml_path = self.analyzer.save_yaml_sidecar(result, result.image_path, overwrite=self.overwrite_checkbox.isChecked())
                         saved_files.append(f"YAML: {yaml_path.name}")
                     except ValueError as e:
                         # Validation error
@@ -709,7 +727,7 @@ class MainWindow(QMainWindow):
                 
                 # Save .txt file (for backward compatibility)
                 try:
-                    txt_path = self.analyzer.save_result(result, Path(str(base_output) + ".txt"), overwrite=self.config.overwrite_existing_files)
+                    txt_path = self.analyzer.save_result(result, Path(str(base_output) + ".txt"), overwrite=self.overwrite_checkbox.isChecked())
                     saved_files.append(f"Text: {txt_path.name}")
                 except ValueError as e:
                     # Validation error
@@ -883,13 +901,13 @@ class MainWindow(QMainWindow):
             
             if txt_path.exists():
                 existing_files.append(txt_path.name)
-                if self.config.overwrite_existing_files:
+                if self.overwrite_checkbox.isChecked():
                     images_to_process.append(img_path)
             else:
                 images_to_process.append(img_path)
         
         # Handle overwrite protection
-        if not self.config.overwrite_existing_files and existing_files:
+        if not self.overwrite_checkbox.isChecked() and existing_files:
             skip_count = len(existing_files)
             process_count = len(images_to_process)
             
@@ -910,13 +928,13 @@ class MainWindow(QMainWindow):
                     f"Found {len(image_paths)} images.\n\n"
                     f"Skipping {skip_count} image(s) with existing analysis files.\n"
                     f"Will process {process_count} new image(s).\n\n"
-                    "To process all files, enable 'Overwrite existing files' in Settings."
+                    "To process all files, enable 'Overwrite existing files'."
                 )
             
             # Update image_paths to only include images to process
             image_paths = images_to_process
         
-        elif self.config.overwrite_existing_files and existing_files:
+        elif self.overwrite_checkbox.isChecked() and existing_files:
             # Show overwrite warning with scrollable list
             dialog = OverwriteWarningDialog(existing_files, self)
             if dialog.exec() != QDialog.DialogCode.Accepted:
@@ -1041,7 +1059,7 @@ class MainWindow(QMainWindow):
                 # Save YAML sidecar (PhotoPrism compatible)
                 if self.write_yaml_checkbox.isVisible() and self.write_yaml_checkbox.isChecked():
                     try:
-                        yaml_path = self.analyzer.save_yaml_sidecar(result, result.image_path, overwrite=self.config.overwrite_existing_files)
+                        yaml_path = self.analyzer.save_yaml_sidecar(result, result.image_path, overwrite=self.overwrite_checkbox.isChecked())
                         saved_files.append("YAML")
                     except ValueError as e:
                         # Validation error - this is critical
@@ -1053,7 +1071,7 @@ class MainWindow(QMainWindow):
                 
                 # Save .txt file (for backward compatibility)
                 try:
-                    txt_path = self.analyzer.save_result(result, Path(str(base_output) + ".txt"), overwrite=self.config.overwrite_existing_files)
+                    txt_path = self.analyzer.save_result(result, Path(str(base_output) + ".txt"), overwrite=self.overwrite_checkbox.isChecked())
                     saved_files.append("TXT")
                 except ValueError as e:
                     # Validation error - this is critical
@@ -1331,6 +1349,9 @@ class MainWindow(QMainWindow):
             settings = dialog.get_settings()
             self.config.update(**settings)
             save_config()
+            
+            # Sync checkbox state with config
+            self.overwrite_checkbox.setChecked(self.config.overwrite_existing_files)
             
             # Update analyzer  
             old_model = self.config.ollama_model

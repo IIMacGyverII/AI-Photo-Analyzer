@@ -5,6 +5,7 @@ from typing import Optional
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QCheckBox,
     QDialog,
     QDialogButtonBox,
     QFormLayout,
@@ -132,6 +133,8 @@ class SettingsDialog(QDialog):
         
         if self.config.output_directory:
             self.output_dir_input.setText(self.config.output_directory)
+        
+        self.overwrite_checkbox.setChecked(self.config.overwrite_existing_files)
     
     def _browse_output_dir(self) -> None:
         """Browse for output directory."""

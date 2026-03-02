@@ -53,7 +53,7 @@
 - **Estimated time to completion** - Real-time ETA updates based on actual processing speed
 - **Automatic retry logic** - Failed analyses automatically retry once before marking as failed
 - **Response validation** - Prevents empty, gibberish, or runaway responses from being saved
-- **File overwrite protection** - Optional protection with skip or warning modes
+- **File overwrite protection** - Easy-access checkbox on main screen for toggling skip or warning modes
 - **Batch error tracking** - Real-time status updates and detailed failure reports
 - **Retry failed items** - Manually retry failed batch items after completion
 - **Settings dialog** with connection testing and model refresh
