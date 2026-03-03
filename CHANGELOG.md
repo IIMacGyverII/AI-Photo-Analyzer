@@ -5,6 +5,34 @@ All notable changes to Ollama Image Analyzer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.4] - 2026-03-03
+
+### Added
+- **Pause/Resume Functionality**: New pause button during batch analysis
+  - Pause batch processing at any time with ⏸️ Pause button
+  - Button changes to ▶️ Resume when paused
+  - Pauses gracefully after current image completes
+  - All progress and metrics preserved during pause
+  - Status bar shows pause/resume state
+  - Thread-safe implementation with mutex and wait condition
+
+### Fixed
+- **Trigger Word Replacement**: Improved reliability of trigger word insertion
+  - Trigger word now properly refreshed before every analysis (batch or single)
+  - Fixed issue where trigger word wouldn't be applied after manual prompt edits
+  - Trigger replacement now works with current prompt text instead of overwriting edits
+  - Smart logic detects when trigger needs to be applied vs already present
+- **Trigger Field Visibility**: Trigger input field now persists for custom prompts
+  - Field stays visible when working with any prompt containing [trigger] placeholder
+  - No longer hidden when saving AI Toolkit presets as custom prompts
+  - Dynamic visibility based on prompt content, not just preset name
+  - Field shows if: preset is AI Toolkit, prompt contains [trigger], or trigger word is set
+
+### Changed
+- Pause button styled with warning color (yellow/amber) to differentiate from primary actions
+- Trigger replacement logic now preserves manual edits while ensuring trigger word is applied
+- Prompt change handler now updates trigger field visibility dynamically
+
 ## [1.1.3] - 2026-03-01
 
 ### Changed

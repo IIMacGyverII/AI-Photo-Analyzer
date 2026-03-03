@@ -80,6 +80,21 @@ QPushButton#successButton {
     border: none;
 }
 
+QPushButton#warningButton {
+    background-color: #f9e2af;
+    color: #1e1e2e;
+    border: none;
+    font-weight: 600;
+}
+
+QPushButton#warningButton:hover {
+    background-color: #ffedc7;
+}
+
+QPushButton#warningButton:pressed {
+    background-color: #dbc897;
+}
+
 /* ===== Text Edits ===== */
 QTextEdit, QPlainTextEdit {
     background-color: #1e1e2e;

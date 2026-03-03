@@ -350,6 +350,22 @@ class PromptEditor(QWidget):
         """Handle prompt text changes."""
         self._update_char_count()
         self.prompt_changed.emit(self.get_prompt())
+        
+        current_text = self.prompt_edit.toPlainText()
+        trigger_word = self.trigger_input.text().strip()
+        
+        # Sync _base_prompt with manual edits for any prompt with trigger placeholders
+        # This preserves user edits when refresh_trigger_replacement is called
+        if "[trigger]" in current_text or (trigger_word and trigger_word in current_text):
+            # Update base prompt by replacing trigger word back to [trigger] placeholder
+            if trigger_word and trigger_word in current_text:
+                self._base_prompt = current_text.replace(trigger_word, "[trigger]")
+            else:
+                # If no trigger word in text, store as-is
+                self._base_prompt = current_text
+        
+        # Update trigger field visibility based on prompt content
+        self._update_trigger_visibility()
     
     def _on_trigger_changed(self) -> None:
         """Handle trigger word changes."""
@@ -400,15 +416,34 @@ class PromptEditor(QWidget):
     
     def _update_trigger_visibility(self) -> None:
         """Show or hide trigger word input and model type selector based on current preset."""
+        # Determine if we should show trigger field:
+        # 1. If preset is ai_toolkit
+        # 2. If current prompt or base prompt contains [trigger] placeholder
+        # 3. If trigger input already has text (user was working with triggers)
+        should_show_trigger = False
+        should_show_model_type = False
+        
         if self._current_preset_path and self._current_preset_path.stem == "ai_toolkit":
+            should_show_trigger = True
+            should_show_model_type = True
+        elif "[trigger]" in self.prompt_edit.toPlainText() or "[trigger]" in self._base_prompt:
+            should_show_trigger = True
+        elif self.trigger_input.text().strip():
+            # Trigger word is set, keep field visible
+            should_show_trigger = True
+        
+        if should_show_trigger:
             self.trigger_label.show()
             self.trigger_input.show()
-            self.model_type_label.show()
-            self.model_type_combo.show()
         else:
             self.trigger_label.hide()
             self.trigger_input.hide()
             self.trigger_input.clear()
+        
+        if should_show_model_type:
+            self.model_type_label.show()
+            self.model_type_combo.show()
+        else:
             self.model_type_label.hide()
             self.model_type_combo.hide()
     
@@ -424,8 +459,8 @@ class PromptEditor(QWidget):
         if not self._base_prompt:
             return
         
-        # Check if this is the AI-Toolkit preset
-        if self._current_preset_path and self._current_preset_path.stem == "ai_toolkit":
+        # Check if base prompt contains [trigger] placeholder
+        if "[trigger]" in self._base_prompt:
             trigger_word = self.trigger_input.text().strip()
             
             if trigger_word:
@@ -440,8 +475,8 @@ class PromptEditor(QWidget):
             self.prompt_edit.setPlainText(updated_prompt)
             self.prompt_edit.blockSignals(False)
             self._update_char_count()
-        else:
-            # For other presets, just use the base prompt
+        elif self._current_preset_path and self._current_preset_path.stem != "ai_toolkit":
+            # For other presets without triggers, just use the base prompt
             self.prompt_edit.blockSignals(True)
             self.prompt_edit.setPlainText(self._base_prompt)
             self.prompt_edit.blockSignals(False)
@@ -523,10 +558,26 @@ class PromptEditor(QWidget):
         This should be called before getting the prompt for batch operations
         to ensure any trigger word changes are properly applied.
         """
-        if self._current_preset_path and self._current_preset_path.stem == "ai_toolkit":
-            # Re-apply trigger replacement with current trigger word
-            self._apply_trigger_replacement()
-            logger.debug(f"Refreshed trigger replacement: trigger='{self.trigger_input.text().strip()}'")
+        trigger_word = self.trigger_input.text().strip()
+        current_text = self.prompt_edit.toPlainText()
+        
+        # Work with any prompt that uses [trigger] placeholder
+        if "[trigger]" in current_text or "[trigger]" in self._base_prompt or trigger_word:
+            # If trigger word is set and prompt contains [trigger] placeholder, apply it
+            if trigger_word and "[trigger]" in current_text:
+                updated_text = current_text.replace("[trigger]", trigger_word)
+                self.prompt_edit.blockSignals(True)
+                self.prompt_edit.setPlainText(updated_text)
+                self.prompt_edit.blockSignals(False)
+                self._update_char_count()
+                logger.debug(f"Applied trigger replacement: '{trigger_word}'")
+            # If no [trigger] placeholder but we have a trigger word, check if it needs updating
+            elif trigger_word and trigger_word not in current_text and "[trigger]" not in current_text:
+                # User might have manually removed trigger - reapply from base prompt
+                self._apply_trigger_replacement()
+                logger.debug(f"Re-applied trigger replacement from base: '{trigger_word}'")
+            else:
+                logger.debug(f"No trigger replacement needed: trigger='{trigger_word}', has_placeholder={'[trigger]' in current_text}")
     
     def get_current_preset_name(self) -> str:
         """Get the current preset name (stem without extension)."""

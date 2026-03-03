@@ -378,6 +378,14 @@ class MainWindow(QMainWindow):
         self.analyze_button.setMinimumHeight(40)
         button_row.addWidget(self.analyze_button)
         
+        # Pause/Resume button (hidden by default)
+        self.pause_button = QPushButton("⏸️ Pause")
+        self.pause_button.setObjectName("warningButton")
+        self.pause_button.setMinimumHeight(40)
+        self.pause_button.setVisible(False)
+        self.pause_button.clicked.connect(self._toggle_pause)
+        button_row.addWidget(self.pause_button)
+        
         # Cancel button (hidden by default)
         self.cancel_button = QPushButton("❌ Cancel")
         self.cancel_button.setObjectName("dangerButton")
@@ -970,6 +978,8 @@ class MainWindow(QMainWindow):
         self.analyze_button.setEnabled(False)
         self.import_button.setEnabled(False)
         self.batch_button.setEnabled(False)
+        self.pause_button.setVisible(True)
+        self.pause_button.setText("⏸️ Pause")
         self.cancel_button.setVisible(True)
         self.progress_bar.setVisible(True)
         self.progress_bar.setRange(0, len(image_paths))
@@ -992,6 +1002,8 @@ class MainWindow(QMainWindow):
         self.batch_worker.progress.connect(self._on_batch_progress)
         self.batch_worker.error.connect(self._on_batch_error)
         self.batch_worker.finished.connect(self._on_batch_finished)
+        self.batch_worker.paused.connect(self._on_batch_paused)
+        self.batch_worker.resumed.connect(self._on_batch_resumed)
         
         self.batch_worker.start()
     
@@ -1186,6 +1198,7 @@ class MainWindow(QMainWindow):
         self.analyze_button.setEnabled(bool(self.image_viewer.current_image))
         self.import_button.setEnabled(True)
         self.batch_button.setEnabled(True)
+        self.pause_button.setVisible(False)
         self.cancel_button.setVisible(False)
         self.progress_bar.setVisible(False)
         self.progress_bar.setValue(0)
@@ -1335,10 +1348,37 @@ class MainWindow(QMainWindow):
             # Request graceful stop
             self.batch_worker.stop()
             
+            # Hide pause button when canceling
+            self.pause_button.setVisible(False)
+            
             self._update_status("⏸️ Stopping batch analysis...")
             logger.info("Batch analysis stop requested by user")
             
             # Note: UI will be re-enabled when batch_worker.finished signal fires
+    
+    def _toggle_pause(self) -> None:
+        """Toggle pause/resume for batch analysis."""
+        if self.batch_worker and self.batch_worker.isRunning():
+            if self.batch_worker.is_paused():
+                # Resume
+                self.batch_worker.resume()
+                self.pause_button.setText("⏸️ Pause")
+                logger.info("User resumed batch analysis")
+            else:
+                # Pause
+                self.batch_worker.pause()
+                self.pause_button.setText("▶️ Resume")
+                logger.info("User paused batch analysis")
+    
+    def _on_batch_paused(self) -> None:
+        """Handle batch analysis paused."""
+        self._update_status("⏸️ Batch analysis paused")
+        self.pause_button.setText("▶️ Resume")
+    
+    def _on_batch_resumed(self) -> None:
+        """Handle batch analysis resumed."""
+        self._update_status("▶️ Batch analysis resumed")
+        self.pause_button.setText("⏸️ Pause")
     
     def _show_settings(self) -> None:
         """Show the settings dialog."""

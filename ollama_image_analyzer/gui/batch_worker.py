@@ -4,7 +4,7 @@ import logging
 from pathlib import Path
 from typing import List, Optional
 
-from PySide6.QtCore import QThread, Signal
+from PySide6.QtCore import QThread, Signal, QMutex, QWaitCondition
 
 from ollama_image_analyzer.core import OllamaAnalyzer, AnalysisResult
 
@@ -22,6 +22,8 @@ class BatchAnalysisWorker(QThread):
     item_retry = Signal(str, str)  # filename, error_message (emitted when retrying)
     progress = Signal(int)  # Progress percentage (0-100)
     error = Signal(str)  # Error message
+    paused = Signal()  # Emitted when analysis is paused
+    resumed = Signal()  # Emitted when analysis is resumed
 
     def __init__(
         self,
@@ -45,10 +47,39 @@ class BatchAnalysisWorker(QThread):
         self.prompt = prompt
         self.analyzer = analyzer
         self._should_stop = False
+        self._is_paused = False
+        self._pause_mutex = QMutex()
+        self._pause_condition = QWaitCondition()
     
     def stop(self) -> None:
         """Request the worker to stop processing."""
         self._should_stop = True
+        # Resume if paused to allow stop to complete
+        self.resume()
+    
+    def pause(self) -> None:
+        """Pause the batch analysis."""
+        self._pause_mutex.lock()
+        self._is_paused = True
+        self._pause_mutex.unlock()
+        self.paused.emit()
+        logger.info("Batch analysis paused")
+    
+    def resume(self) -> None:
+        """Resume the batch analysis."""
+        self._pause_mutex.lock()
+        self._is_paused = False
+        self._pause_condition.wakeAll()
+        self._pause_mutex.unlock()
+        self.resumed.emit()
+        logger.info("Batch analysis resumed")
+    
+    def is_paused(self) -> bool:
+        """Check if the worker is currently paused."""
+        self._pause_mutex.lock()
+        paused = self._is_paused
+        self._pause_mutex.unlock()
+        return paused
     
     def run(self) -> None:
         """Run the batch analysis in a background thread."""
@@ -62,6 +93,18 @@ class BatchAnalysisWorker(QThread):
             
             for index, image_path in enumerate(self.image_paths):
                 # Check if we should stop
+                if self._should_stop:
+                    logger.info(f"Batch analysis stopped by user after {processed} images")
+                    break
+                
+                # Check if paused and wait
+                self._pause_mutex.lock()
+                while self._is_paused and not self._should_stop:
+                    logger.debug(f"Worker paused at image {index + 1}/{total}")
+                    self._pause_condition.wait(self._pause_mutex)
+                self._pause_mutex.unlock()
+                
+                # Check again if we should stop after resuming from pause
                 if self._should_stop:
                     logger.info(f"Batch analysis stopped by user after {processed} images")
                     break
