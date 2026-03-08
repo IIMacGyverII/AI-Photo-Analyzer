@@ -2,6 +2,7 @@
 
 **A modern, polished, cross-platform desktop application for detailed image analysis using Ollama vision models.**
 
+![Version](https://img.shields.io/badge/version-1.2.0-blue)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-blue)
 ![Python](https://img.shields.io/badge/python-3.12+-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -24,7 +25,14 @@
 - **Built-in prompt editor** with character/word count
 - **Preset dropdown selector** for quick template switching
 - **Save/Load/Reset** functionality for managing multiple prompt templates
-- **AI-Toolkit preset** with dynamic trigger word input and model-type selector for training datasets
+- **🎬 AI-Toolkit presets** NEW in v1.2.0:
+  - **Cinematographic templates** for video generation model training (LTX-2, FLUX, SD, etc.)
+  - **Dynamic trigger word input** - Ensures consistent subject naming throughout captions
+  - **Model-type selector** - Optimized prompts for FLUX, SD3, SDXL, SD1.5, Pony, LTX variants
+  - **Movement-focused descriptions** - Emphasizes action, gestures, and temporal progression
+  - **Professional camera work** - Includes shot types, angles, framing, depth of field
+  - **150-250 word structured captions** - Scene documentation with comprehensive visual details
+  - **Video model support** - LTX preset includes audio tags to prevent background noise
 - **Pre-built templates** for common use cases:
   - **Default**: Comprehensive image description for general use
   - **AI-Toolkit**: Diffusion model training (FLUX, SD3, SDXL, SD1.5, Pony, LTX variants)
@@ -62,6 +70,55 @@
 - **Configuration persistence** across sessions
 - **Custom application icon** for taskbar and window
 - **Cross-platform** directory management using platformdirs
+
+---
+
+## 🎬 What's New in v1.2.0
+
+### Cinematographic Captions for Video Generation Training
+
+Version 1.2.0 introduces comprehensive **cinematographic templates** optimized for training video generation models like LTX-2, FLUX, and Stable Diffusion variants. All AI-Toolkit presets have been completely rewritten with a professional filmmaking approach.
+
+**Key Improvements:**
+
+🎥 **Movement-Focused Descriptions**
+- Captions emphasize action, gestures, and temporal progression
+- Descriptions written as cinematographer shot lists
+- Includes implied motion, trajectory, and dynamic elements
+
+📹 **Professional Camera Work**
+- Shot types: wide shot, medium shot, close-up, extreme close-up
+- Camera angles: eye-level, low angle, high angle, Dutch angle, overhead
+- Camera position: frontal, three-quarter view, profile, rear view
+- Depth of field specifications: shallow focus, deep focus, focal points
+
+🎯 **Enhanced Trigger Word System**
+- Explicit instructions ensure AI uses your trigger word consistently
+- Prevents generic terms like "a woman", "a man", "the person"
+- Works with any trigger word: "jess", "ohwx", "yourname", etc.
+- Trigger word appears throughout the entire caption naturally
+
+🎬 **Structured Scene Documentation**
+- 150-250 word comprehensive descriptions
+- Covers: action, subject appearance, environment, lighting, color, composition
+- Natural sentence flow following temporal progression
+- Literal and observational (no metaphors or abstract concepts)
+
+🔊 **Video Model Support (LTX/LTX-2)**
+- Mandatory audio tags to prevent background noise in generated videos
+- Optimized for image-to-video training datasets
+- Temporal continuity emphasis for video frame coherence
+
+**Updated Presets:**
+- ✅ FLUX.1-dev
+- ✅ Stable Diffusion 3
+- ✅ Stable Diffusion XL
+- ✅ Stable Diffusion 1.5
+- ✅ Pony Diffusion
+- ✅ LTX / LTX-2 (with audio tags)
+- ✅ Generic ai-toolkit
+
+See the [full release notes](https://github.com/IIMacGyverII/AI-Photo-Analyzer/releases/tag/v1.2.0) for more details.
 
 ---
 
